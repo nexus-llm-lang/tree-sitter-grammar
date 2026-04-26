@@ -174,7 +174,10 @@ export default grammar({
         optional(seq("as", field("alias", $.identifier)))
       ),
 
-    // Import path: quoted string (e.g. "nxlib/stdlib/filesystem.nx")
+    // Import path: quoted string. Three forms are accepted:
+    //   "std:stdio"         — package-qualified (resolves via PackageResolver)
+    //   "pkg:path/module"   — third-party package
+    //   "examples/foo.nx"   — bare relative path
     import_path: ($) => $.string_literal,
 
     // [export] cap Name do fn sig ... end

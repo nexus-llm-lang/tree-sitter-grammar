@@ -844,7 +844,7 @@ end
 Import with uppercase items (ports, types)
 ===============================================
 
-import { Fs, Handle }, * as fs from "nxlib/stdlib/filesystem.nx"
+import { Fs, Handle }, * as fs from "std:filesystem"
 
 -----------------------------------------------
 
@@ -1201,7 +1201,7 @@ end
 Import with as renaming
 ===============================================
 
-import { add as my_add, sub } from "stdlib/math.nx"
+import { add as my_add, sub } from "std:math"
 
 -----------------------------------------------
 
