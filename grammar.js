@@ -779,6 +779,16 @@ export default grammar({
       ),
 
     // label: value
+    //
+    // Note: the language supports punning at call sites (`f(v)` desugars
+    // to `f(v: v)`, `f(%v)` to `f(v: %v)`, etc. — see
+    // ../docs/spec/syntax.md). The tree-sitter grammar does NOT yet
+    // recognize the unlabeled forms because of an unresolved LR
+    // ambiguity between `var (paren_expr)` and `call_expr(args)`.
+    // Tools that use this grammar will currently parse `f(v)` as
+    // `variable(f) + paren_expr(v)`. Constructor pattern punning works
+    // (Foo(v)) because uident is a distinct token.
+    // TODO: proper grammar-level call-arg punning support.
     labeled_arg: ($) =>
       seq(
         field("label", $.identifier),
@@ -795,7 +805,7 @@ export default grammar({
         ")"
       ),
 
-    // [ label ":" ] expr
+    // [ label ":" ] expr — both labeled and unlabeled (positional or pun) forms.
     ctor_arg: ($) =>
       choice(
         seq(field("label", $.identifier), ":", field("value", $._expr)),
