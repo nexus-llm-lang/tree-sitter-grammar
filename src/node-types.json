@@ -1143,6 +1143,16 @@
             "named": true
           }
         ]
+      },
+      "sigil": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "sigil",
+            "named": true
+          }
+        ]
       }
     },
     "children": {
@@ -2216,6 +2226,16 @@
           },
           {
             "type": "while_stmt",
+            "named": true
+          }
+        ]
+      },
+      "kont": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "identifier",
             "named": true
           }
         ]
@@ -6775,6 +6795,10 @@
     "named": false
   },
   {
+    "type": "throw",
+    "named": false
+  },
+  {
     "type": "throws",
     "named": false
   },
@@ -6812,6 +6836,10 @@
   },
   {
     "type": "while",
+    "named": false
+  },
+  {
+    "type": "with",
     "named": false
   },
   {

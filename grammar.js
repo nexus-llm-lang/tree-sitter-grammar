@@ -202,7 +202,10 @@ export default grammar({
         optional(seq("throws", field("throws", $._effect_type)))
       ),
 
-    // fn name[<T>](params) -> ret [require req] [throws eff] do body end
+    // fn name[<T>](params) -> ret [require req] [throws eff] [with @ kont] do body end
+    // The `with @ kont` clause names the continuation captured by this handler
+    // arm; without it the arm has no first-class continuation. See
+    // parse_optional_with_kont in src/frontend/parser.nx.
     handler_fn: ($) =>
       seq(
         "fn",
@@ -213,6 +216,7 @@ export default grammar({
         field("ret_type", $._type),
         optional(seq("require", field("requires", $._effect_type))),
         optional(seq("throws", field("throws", $._effect_type))),
+        optional(seq("with", "@", field("kont", $.identifier))),
         "do",
         field("body", repeat($._stmt)),
         "end"
@@ -717,8 +721,8 @@ export default grammar({
     // @expr or @(expr)
     force_expr: ($) => seq("@", field("value", $._atom_expr)),
 
-    // raise expr
-    raise_expr: ($) => seq("raise", field("value", $._expr)),
+    // raise expr  (also: throw expr — lexer-level synonym, see token.nx)
+    raise_expr: ($) => seq(choice("raise", "throw"), field("value", $._expr)),
 
     // & [sigil] name
     borrow_expr: ($) =>
@@ -958,9 +962,16 @@ export default grammar({
         field("name", $.identifier)
       ),
 
-    // Constructor([ label ":" ] pat, ...)  — optional labels, UIDENT name
+    // [sigil] Constructor([ label ":" ] pat, ...)  — optional labels, UIDENT name.
+    // Sigil routes the constructor pattern onto the matching cell shape:
+    //   ~Ctor(...) — ref-cell ctor pattern (mutable)
+    //   %Ctor(...) — linear ctor pattern
+    //   @Ctor(...) — lazy/thunk ctor pattern
+    //   &Ctor(...) — borrow ctor pattern
+    // See parse_pattern.nx (nexus-nahg) for the sigil-aware fork.
     constructor_pattern: ($) =>
       seq(
+        optional(field("sigil", $.sigil)),
         field("name", $.uident),
         "(",
         commaSep($.ctor_pat_arg),

@@ -1198,6 +1198,89 @@ end
       body: (return_stmt value: (literal (unit_literal))))))
 
 ===============================================
+Let pattern destructuring with sigil constructor (nexus-nahg)
+===============================================
+
+let f = fn (r: Result) -> unit do
+  let %Ok(val: v) = r
+  return ()
+end
+
+-----------------------------------------------
+
+(source_file
+  (let_def
+    name: (identifier)
+    value: (lambda_expr
+      params: (param_list
+        (param name: (identifier) type: (type_identifier)))
+      ret_type: (primitive_type)
+      body: (let_pattern_stmt
+        pattern: (constructor_pattern
+          sigil: (sigil)
+          name: (uident)
+          (ctor_pat_arg
+            label: (identifier)
+            pattern: (variable_pattern name: (identifier))))
+        value: (variable name: (identifier)))
+      body: (return_stmt value: (literal (unit_literal))))))
+
+===============================================
+Handler arm with `with @ k` continuation binder
+===============================================
+
+let f = fn () -> unit do
+  let h = handler IO do
+    fn write(msg: string) -> unit with @ k do
+      return ()
+    end
+  end
+  return ()
+end
+
+-----------------------------------------------
+
+(source_file
+  (let_def
+    name: (identifier)
+    value: (lambda_expr
+      params: (param_list)
+      ret_type: (primitive_type)
+      body: (let_stmt
+        name: (identifier)
+        value: (handler_expr
+          cap_name: (uident)
+          (handler_fn
+            name: (identifier)
+            params: (param_list
+              (param name: (identifier) type: (primitive_type)))
+            ret_type: (primitive_type)
+            kont: (identifier)
+            body: (return_stmt value: (literal (unit_literal))))))
+      body: (return_stmt value: (literal (unit_literal))))))
+
+===============================================
+`throw` as synonym of `raise`
+===============================================
+
+let f = fn () -> unit throws { Foo } do
+  throw Foo()
+end
+
+-----------------------------------------------
+
+(source_file
+  (let_def
+    name: (identifier)
+    value: (lambda_expr
+      params: (param_list)
+      ret_type: (primitive_type)
+      throws: (row_type (type_identifier))
+      body: (expr_stmt
+        (raise_expr
+          value: (constructor_expr name: (uident)))))))
+
+===============================================
 Import with as renaming
 ===============================================
 
