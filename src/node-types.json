@@ -84,6 +84,10 @@
             "named": true
           },
           {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
             "type": "variable",
             "named": true
           }
@@ -392,6 +396,10 @@
             "named": true
           },
           {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
             "type": "variable",
             "named": true
           }
@@ -471,6 +479,10 @@
           },
           {
             "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
             "named": true
           },
           {
@@ -559,6 +571,10 @@
           },
           {
             "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
             "named": true
           },
           {
@@ -763,6 +779,10 @@
           },
           {
             "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
             "named": true
           },
           {
@@ -1257,6 +1277,10 @@
             "named": true
           },
           {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
             "type": "variable",
             "named": true
           }
@@ -1463,6 +1487,10 @@
         },
         {
           "type": "record_expr",
+          "named": true
+        },
+        {
+          "type": "unary_expr",
           "named": true
         },
         {
@@ -1871,6 +1899,10 @@
             "named": true
           },
           {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
             "type": "variable",
             "named": true
           }
@@ -1950,6 +1982,10 @@
           },
           {
             "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
             "named": true
           },
           {
@@ -2443,6 +2479,10 @@
             "named": true
           },
           {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
             "type": "variable",
             "named": true
           }
@@ -2559,6 +2599,10 @@
             "named": true
           },
           {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
             "type": "variable",
             "named": true
           }
@@ -2638,6 +2682,10 @@
           },
           {
             "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
             "named": true
           },
           {
@@ -2825,6 +2873,10 @@
             "named": true
           },
           {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
             "type": "variable",
             "named": true
           }
@@ -2972,6 +3024,10 @@
           },
           {
             "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
             "named": true
           },
           {
@@ -3272,6 +3328,10 @@
             "named": true
           },
           {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
             "type": "variable",
             "named": true
           }
@@ -3538,6 +3598,10 @@
           },
           {
             "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
             "named": true
           },
           {
@@ -3931,6 +3995,10 @@
             "named": true
           },
           {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
             "type": "variable",
             "named": true
           }
@@ -4050,6 +4118,10 @@
           },
           {
             "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
             "named": true
           },
           {
@@ -4215,6 +4287,10 @@
             "named": true
           },
           {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
             "type": "variable",
             "named": true
           }
@@ -4304,6 +4380,10 @@
           },
           {
             "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
             "named": true
           },
           {
@@ -4456,6 +4536,10 @@
           },
           {
             "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
             "named": true
           },
           {
@@ -4840,6 +4924,10 @@
             "named": true
           },
           {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
             "type": "variable",
             "named": true
           }
@@ -4925,6 +5013,10 @@
           },
           {
             "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
             "named": true
           },
           {
@@ -5023,6 +5115,10 @@
           },
           {
             "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
             "named": true
           },
           {
@@ -5259,6 +5355,10 @@
           "named": true
         },
         {
+          "type": "unary_expr",
+          "named": true
+        },
+        {
           "type": "variable",
           "named": true
         }
@@ -5348,6 +5448,10 @@
           },
           {
             "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
             "named": true
           },
           {
@@ -5461,6 +5565,10 @@
           },
           {
             "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
             "named": true
           },
           {
@@ -5754,6 +5862,10 @@
           },
           {
             "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
             "named": true
           },
           {
@@ -6152,6 +6264,112 @@
     }
   },
   {
+    "type": "unary_expr",
+    "named": true,
+    "fields": {
+      "operand": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "array_expr",
+            "named": true
+          },
+          {
+            "type": "borrow_expr",
+            "named": true
+          },
+          {
+            "type": "call_expr",
+            "named": true
+          },
+          {
+            "type": "constructor_expr",
+            "named": true
+          },
+          {
+            "type": "field_access",
+            "named": true
+          },
+          {
+            "type": "force_expr",
+            "named": true
+          },
+          {
+            "type": "handler_expr",
+            "named": true
+          },
+          {
+            "type": "if_let_expr",
+            "named": true
+          },
+          {
+            "type": "index_expr",
+            "named": true
+          },
+          {
+            "type": "lambda_expr",
+            "named": true
+          },
+          {
+            "type": "linear_list_expr",
+            "named": true
+          },
+          {
+            "type": "list_expr",
+            "named": true
+          },
+          {
+            "type": "literal",
+            "named": true
+          },
+          {
+            "type": "match_expr",
+            "named": true
+          },
+          {
+            "type": "paren_expr",
+            "named": true
+          },
+          {
+            "type": "raise_expr",
+            "named": true
+          },
+          {
+            "type": "record_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
+            "type": "variable",
+            "named": true
+          }
+        ]
+      },
+      "operator": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "!",
+            "named": false
+          },
+          {
+            "type": "-",
+            "named": false
+          },
+          {
+            "type": "-.",
+            "named": false
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "variable",
     "named": true,
     "fields": {
@@ -6442,6 +6660,10 @@
             "named": true
           },
           {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
             "type": "variable",
             "named": true
           }
@@ -6453,6 +6675,10 @@
     "type": "wildcard_pattern",
     "named": true,
     "fields": {}
+  },
+  {
+    "type": "!",
+    "named": false
   },
   {
     "type": "!=",

@@ -1324,6 +1324,42 @@ end
       body: (return_stmt value: (literal (unit_literal))))))
 
 ===============================================
+Prefix unary -, -., ! (nexus-4f42)
+===============================================
+
+let f = fn (x: i64, y: float, b: bool) -> i64 do
+  let a = -x
+  let c = !b
+  let d = -.y
+  return a
+end
+
+-----------------------------------------------
+
+(source_file
+  (let_def
+    name: (identifier)
+    value: (lambda_expr
+      params: (param_list
+        (param name: (identifier) type: (primitive_type))
+        (param name: (identifier) type: (primitive_type))
+        (param name: (identifier) type: (primitive_type)))
+      ret_type: (primitive_type)
+      body: (let_stmt
+        name: (identifier)
+        value: (unary_expr
+          operand: (variable name: (identifier))))
+      body: (let_stmt
+        name: (identifier)
+        value: (unary_expr
+          operand: (variable name: (identifier))))
+      body: (let_stmt
+        name: (identifier)
+        value: (unary_expr
+          operand: (variable name: (identifier))))
+      body: (return_stmt value: (variable name: (identifier))))))
+
+===============================================
 Punning: bare-ident and sigil-prefixed constructor args
 ===============================================
 

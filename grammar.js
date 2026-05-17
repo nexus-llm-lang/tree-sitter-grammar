@@ -525,7 +525,22 @@ export default grammar({
 
     // ─── Expressions ─────────────────────────────────────────────────────────
 
-    _expr: ($) => choice($.binary_expr, $._postfix_expr),
+    _expr: ($) => choice($.binary_expr, $.unary_expr, $._postfix_expr),
+
+    // Prefix unary: -, -., !  — right-associative, binds tighter than every
+    // infix binary operator (prec 1-6) and looser than postfix `.field` /
+    // `[idx]` (prec 10). See parse_unary_expr in src/frontend/parser.nx
+    // (nexus-4f42). Negative integer / float literals are also recognised
+    // at token level by integer_literal / float_literal — both shapes
+    // ultimately denote the same value.
+    unary_expr: ($) =>
+      prec.right(
+        7,
+        seq(
+          field("operator", choice("-", "-.", "!")),
+          field("operand", choice($.unary_expr, $._postfix_expr))
+        )
+      ),
 
     // Binary operators with precedence levels (low → high)
     // 1: ||  2: &&  3: comparison  4: additive  5: multiplicative
