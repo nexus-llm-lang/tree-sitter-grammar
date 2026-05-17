@@ -313,11 +313,11 @@ end
       body: (return_stmt value: (literal (unit_literal))))))
 
 ===============================================
-Raise expression
+Throw expression
 ===============================================
 
 let fail = fn () -> unit do
-  raise [=[ error ]=]
+  throw [=[ error ]=]
 end
 
 -----------------------------------------------
@@ -329,7 +329,7 @@ end
       params: (param_list)
       ret_type: (primitive_type)
       body: (expr_stmt
-        (raise_expr
+        (throw_expr
           value: (literal (string_literal)))))))
 
 ===============================================
@@ -579,7 +579,7 @@ Constructor expression with labels
 
 let f = fn () -> unit do
   let err = PermissionDenied(msg: [=[/tmp/data]=], code: 13)
-  raise err
+  throw err
 end
 
 -----------------------------------------------
@@ -601,7 +601,7 @@ end
             label: (identifier)
             value: (literal (integer_literal)))))
       body: (expr_stmt
-        (raise_expr
+        (throw_expr
           value: (variable name: (identifier)))))))
 
 ===============================================
@@ -1258,27 +1258,6 @@ end
             kont: (identifier)
             body: (return_stmt value: (literal (unit_literal))))))
       body: (return_stmt value: (literal (unit_literal))))))
-
-===============================================
-`throw` as synonym of `raise`
-===============================================
-
-let f = fn () -> unit throws { Foo } do
-  throw Foo()
-end
-
------------------------------------------------
-
-(source_file
-  (let_def
-    name: (identifier)
-    value: (lambda_expr
-      params: (param_list)
-      ret_type: (primitive_type)
-      throws: (row_type (type_identifier))
-      body: (expr_stmt
-        (raise_expr
-          value: (constructor_expr name: (uident)))))))
 
 ===============================================
 Import with as renaming

@@ -3240,7 +3240,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "raise_expr"
+          "name": "throw_expr"
         },
         {
           "type": "SYMBOL",
@@ -3461,21 +3461,12 @@
         }
       ]
     },
-    "raise_expr": {
+    "throw_expr": {
       "type": "SEQ",
       "members": [
         {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "STRING",
-              "value": "raise"
-            },
-            {
-              "type": "STRING",
-              "value": "throw"
-            }
-          ]
+          "type": "STRING",
+          "value": "throw"
         },
         {
           "type": "FIELD",

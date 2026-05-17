@@ -687,7 +687,7 @@ export default grammar({
         $.paren_expr,
         $.if_let_expr,
         $.match_expr,
-        $.raise_expr,
+        $.throw_expr,
         $.borrow_expr,
         $.lambda_expr,
         $.handler_expr,
@@ -739,8 +739,8 @@ export default grammar({
     // @expr or @(expr)
     force_expr: ($) => seq("@", field("value", $._atom_expr)),
 
-    // raise expr  (also: throw expr — lexer-level synonym, see token.nx)
-    raise_expr: ($) => seq(choice("raise", "throw"), field("value", $._expr)),
+    // throw expr
+    throw_expr: ($) => seq("throw", field("value", $._expr)),
 
     // & [sigil] name
     borrow_expr: ($) =>
