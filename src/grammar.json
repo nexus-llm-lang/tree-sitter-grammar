@@ -1006,22 +1006,6 @@
           "value": "let"
         },
         {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "FIELD",
-              "name": "sigil",
-              "content": {
-                "type": "SYMBOL",
-                "name": "sigil"
-              }
-            },
-            {
-              "type": "BLANK"
-            }
-          ]
-        },
-        {
           "type": "FIELD",
           "name": "name",
           "content": {

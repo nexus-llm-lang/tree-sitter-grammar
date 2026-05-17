@@ -223,12 +223,15 @@ export default grammar({
       ),
 
     // [pub] let name [: type] = expr
-    // [pub] let [sigil] name [: type] = expr
+    // Top-level let bindings are sigil-free — parse_global_let in
+    // src/frontend/parser.nx expects an identifier immediately after
+    // `let`. Sigil-prefixed forms (`%x`, `~x`, `@x`) and pattern
+    // destructure (`let Foo(v) = e`) appear only at statement scope
+    // (let_stmt / let_pattern_stmt).
     let_def: ($) =>
       seq(
         optional("export"),
         "let",
-        optional(field("sigil", $.sigil)),
         field("name", $.identifier),
         optional(seq(":", field("type", $._type))),
         "=",
