@@ -37,15 +37,25 @@ export default grammar({
     [$.sigil, $.borrow_expr],
     // `@x` — force_expr starting with `@` or sigil `@` in variable/let_stmt
     [$.sigil, $.force_expr],
-    // `match x do ...` — match_stmt (stmt body) vs match_expr (expr body) via expr_stmt
-    [$.match_stmt, $.match_expr],
-    // arm body in match_case (stmts) vs match_case_expr (expr)
-    [$.expr_stmt, $.match_case_expr],
-    // `if let pat = expr then expr end` — if_let_expr vs expr_stmt in stmt body
-    [$.expr_stmt, $.if_let_expr],
-    // `else if ...` — chain (nested if as else_branch) vs block (if as first of stmt list)
-    [$.if_stmt, $._stmt],
-    [$.if_let_stmt, $._stmt],
+    // (`else if ...` chain disambiguation handled below via _atom_expr/_stmt conflicts.)
+    // `x` vs start of `x.y` (dotted_identifier in call_expr) vs start of
+    // `x.Y` (_ctor_path module prefix). Identifier-as-variable wins by default.
+    [$._ctor_path, $.variable, $.dotted_identifier],
+    [$._ctor_path, $.dotted_identifier],
+    [$._ctor_path, $.variable],
+    [$._ctor_path],
+    // Block-style if/match/while/for/try at the head of a stmt block:
+    // direct `_stmt` route vs `expr_stmt → _expr → _atom_expr → x_stmt`.
+    // The direct route is preferred (shorter parse).
+    [$._stmt, $._atom_expr],
+    [$._stmt, $._atom_expr, $.if_stmt],
+    [$._stmt, $._atom_expr, $.if_let_stmt],
+    // dangling-else: `else if_stmt` (chain — inner if consumes the `end`) vs
+    // `else_branch: stmt*` (block, current `if` consumes the `end`). When the
+    // else branch is a single `if`, both shapes are valid; the chain form is
+    // semantically preferred to keep nesting flat. Same for if_let_stmt.
+    [$._atom_expr, $.if_stmt],
+    [$._atom_expr, $.if_let_stmt],
   ],
 
   rules: {
@@ -55,8 +65,21 @@ export default grammar({
 
     line_comment: (_) => token(seq("//", /.*/)),
 
+    // Block comment: lexer.nx:163-183 supports arbitrary-depth nesting via a
+    // depth counter. tree-sitter regex can't recurse, so we accept one level
+    // of nesting here. Deeper nesting (`/* /* /* */ */ */`) requires an
+    // external scanner — TODO if real source ever uses it.
     block_comment: (_) =>
-      token(seq("/*", repeat(choice(/[^*]/, seq("*", /[^/]/))), "*/")),
+      token(seq(
+        "/*",
+        repeat(choice(
+          /[^*/]/,
+          seq("/", /[^*]/),
+          seq("*", /[^/]/),
+          seq("/", "*", repeat(choice(/[^*]/, seq("*", /[^/]/))), "*/")
+        )),
+        "*/"
+      )),
 
     // ─── Identifiers ─────────────────────────────────────────────────────────
 
@@ -68,6 +91,10 @@ export default grammar({
 
     // ─── Top-level definitions ───────────────────────────────────────────────
 
+    // Comments are in `extras` so they're already legal anywhere between
+    // tokens — listing them here too made them eagerly close any partial
+    // top-level form (e.g. a multi-variant `type` def with interior
+    // comments).
     _top_level: ($) =>
       choice(
         $.type_def,
@@ -76,9 +103,7 @@ export default grammar({
         $.cap_def,
         $.external_def,
         $.exception_group_def,
-        $.let_def,
-        $.line_comment,
-        $.block_comment
+        $.let_def
       ),
 
     // [pub] [opaque] type Name[<T>] = { field: type, ... }
@@ -103,10 +128,12 @@ export default grammar({
         optional(seq("(", commaSep1($.variant_field), ")"))
       ),
 
-    // type | label: type
+    // type | label: type   — labeled form is greedy so `name: T` does not
+    // misparse as bare-type `name` (lowercase identifier now matches a generic
+    // TyVar in _type) followed by stray `: T`.
     variant_field: ($) =>
       choice(
-        seq(field("label", $.identifier), ":", field("type", $._type)),
+        prec(1, seq(field("label", $.identifier), ":", field("type", $._type))),
         field("type", $._type)
       ),
 
@@ -134,6 +161,8 @@ export default grammar({
     // import { a, b } from "path/to/mod.nx"
     // import { a, b }, * as alias from "path/to/mod.nx"
     // import * as alias from "path/to/mod.nx"
+    // import as alias from "path/to/mod.nx"   — bare alias (parse_topdef.nx:183)
+    // import from "path/to/mod.nx"            — no items / no alias (parse_topdef.nx:196)
     import_def: ($) =>
       seq(
         "import",
@@ -163,7 +192,14 @@ export default grammar({
             field("alias", $.identifier),
             "from",
             field("path", $.import_path)
-          )
+          ),
+          seq(
+            "as",
+            field("alias", $.identifier),
+            "from",
+            field("path", $.import_path)
+          ),
+          seq("from", field("path", $.import_path))
         )
       ),
 
@@ -240,7 +276,11 @@ export default grammar({
 
     // ─── Parameters ──────────────────────────────────────────────────────────
 
-    type_params: ($) => seq("<", commaSep1($.uident), ">"),
+    // Type params accept BOTH uppercase and lowercase names
+    // (parse_params.nx:107 admits TkUident | TkIdent — `fn <a>(x: a) -> a`
+    // is a canonical generic shape).
+    type_params: ($) =>
+      seq("<", commaSep1(choice($.uident, $.identifier)), ">"),
 
     param_list: ($) => seq("(", commaSep($.param), ")"),
 
@@ -270,8 +310,20 @@ export default grammar({
         $.array_type,
         $.row_type,
         $.lazy_type,
-        alias($.uident, $.type_identifier) // type variable or user-defined monotype
+        $.handler_type,
+        $.paren_type,
+        $._type_path, // bare or qualified user-defined monotype / TyVar
+        // Lowercase generic — parse_type.nx:212 resolves primitives first, then
+        // accepts the identifier as a type variable (`fn <a>(x: a) -> a`).
+        alias($.identifier, $.type_identifier)
       ),
+
+    // (T)  — parenthesised type. Disambiguated from arrow_type by lookahead:
+    // arrow_type starts with `(` then has labeled params (`label:`) or `)`
+    // followed by `->`; paren_type holds a bare `_type`. parse_type.nx:245.
+    // Lower prec than lazy_type's `@(T require/throws)` long form so
+    // `@(T)` is read as lazy(T) not lazy(paren(T)).
+    paren_type: ($) => prec(-1, seq("(", $._type, ")")),
 
     primitive_type: (_) =>
       choice("i32", "i64", "f32", "f64", "float", "bool", "string", "char", "unit"),
@@ -285,8 +337,26 @@ export default grammar({
     // %T
     linear_type: ($) => seq("%", field("inner", $._type)),
 
-    // @T
-    lazy_type: ($) => seq("@", field("inner", $._type)),
+    // @T  — sugar for `@(T ; {} ; {})`
+    // @(T [require ROW] [throws ROW]) — paren long form with deferred effect rows
+    // (parse_type.nx:281-307).
+    lazy_type: ($) =>
+      seq(
+        "@",
+        choice(
+          field("inner", $._type),
+          seq(
+            "(",
+            field("inner", $._type),
+            optional(seq("require", field("require", $._effect_type))),
+            optional(seq("throws", field("throws", $._effect_type))),
+            ")"
+          )
+        )
+      ),
+
+    // handler HandlerName — a nominal handler type (parse_type.nx:308-310)
+    handler_type: ($) => seq("handler", field("name", $.uident)),
 
     // { x: T, y: U }
     record_type: ($) => seq("{", commaSep1($.record_type_field), "}"),
@@ -314,13 +384,26 @@ export default grammar({
         alias(token("|]"), "|]")
       ),
 
-    // Name<T, U>  or  Result<T, E>
+    // Name<T, U>  or  Result<T, E>  or  map.Map<K, V>  or  mod.sub.Name<T>
+    // The base may be module-qualified — parse_type.nx:28 consumes a dotted
+    // tail of mixed-case segments before looking for `<`.
     generic_type: ($) =>
       seq(
-        field("base", alias($.uident, $.type_identifier)),
+        field("base", $._type_path),
         "<",
         field("args", commaSep1($._type)),
         ">"
+      ),
+
+    // Qualified type-atom name: `Name`, `Mod.Name`, `mod.Name`, `a.b.C`.
+    _type_path: ($) =>
+      choice(
+        alias($.uident, $.type_identifier),
+        seq(
+          sep1(".", choice($.identifier, $.uident)),
+          ".",
+          alias($.uident, $.type_identifier)
+        )
       ),
 
     // (label: T, ...) -> ret [require req] [throws eff]
@@ -391,7 +474,7 @@ export default grammar({
     assign_stmt: ($) =>
       seq(field("target", $._expr), "<-", field("value", $._expr)),
 
-    // if cond then stmts [else stmts | else if...] end
+    // if cond then stmts [else stmts | else if... | else if let...] end
     // `else if` is a chain: the inner `if` consumes the trailing `end`, so the
     // outer form has a single terminal `end` (no nested `end end`).
     if_stmt: ($) =>
@@ -402,12 +485,13 @@ export default grammar({
         field("then_branch", repeat($._stmt)),
         choice(
           seq("else", field("else_branch", $.if_stmt)),
+          seq("else", field("else_branch", $.if_let_stmt)),
           seq("else", field("else_branch", repeat($._stmt)), "end"),
           "end"
         )
       ),
 
-    // if let pattern = expr then stmts [else stmts | else if...] end
+    // if let pattern = expr then stmts [else stmts | else if... | else if let...] end
     if_let_stmt: ($) =>
       seq(
         "if",
@@ -426,14 +510,17 @@ export default grammar({
       ),
 
     // match expr do | pat -> stmts ... end
+    // Higher prec than match_expr — when arm body is `return ...` / `let ...`
+    // / etc the stmt form is the only valid parse, but tree-sitter LR cannot
+    // always look that far ahead. Force stmt-form by default.
     match_stmt: ($) =>
-      seq(
+      prec(1, seq(
         "match",
         field("target", $._expr),
         "do",
         repeat($.match_case),
         "end"
-      ),
+      )),
 
     match_case: ($) =>
       seq(
@@ -521,7 +608,12 @@ export default grammar({
         field("value", $._expr)
       ),
 
-    expr_stmt: ($) => $._expr,
+    // expr_stmt is the last-resort stmt form. Lower prec than the explicit
+    // block stmt forms (match_stmt/if_stmt/while_stmt/for_stmt/try_stmt) so
+    // `match/if/while/for/try` blocks consistently take the stmt-form
+    // interpretation when their bodies contain stmt-only constructs
+    // (return, let, assignment, ...).
+    expr_stmt: ($) => prec(-1, $._expr),
 
     // ─── Expressions ─────────────────────────────────────────────────────────
 
@@ -682,11 +774,21 @@ export default grammar({
         )
       ),
 
+    // Block-style forms (if/match/while/for/try) are represented by their
+    // stmt-form rules and used in both stmt and expression positions — the
+    // parser at runtime (parser/core.nx:251-254) treats them as expression
+    // atoms unconditionally. Including the stmt forms here keeps the grammar
+    // single-rule per construct and avoids LR conflict between stmt-form and
+    // expr-form variants with identical syntax.
     _atom_expr: ($) =>
       choice(
         $.paren_expr,
-        $.if_let_expr,
-        $.match_expr,
+        $.if_stmt,
+        $.if_let_stmt,
+        $.match_stmt,
+        $.while_stmt,
+        $.for_stmt,
+        $.try_stmt,
         $.throw_expr,
         $.borrow_expr,
         $.lambda_expr,
@@ -700,38 +802,6 @@ export default grammar({
         $.force_expr,
         $.literal,
         $.variable
-      ),
-
-    // if let pattern = expr then expr [else expr] end  (expression position)
-    if_let_expr: ($) =>
-      seq(
-        "if",
-        "let",
-        field("pattern", $._pattern),
-        "=",
-        field("target", $._expr),
-        "then",
-        field("then_branch", $._expr),
-        optional(seq("else", field("else_branch", $._expr))),
-        "end"
-      ),
-
-    // match expr do | pat -> expr ... end  (expression position)
-    match_expr: ($) =>
-      seq(
-        "match",
-        field("target", $._expr),
-        "do",
-        repeat($.match_case_expr),
-        "end"
-      ),
-
-    match_case_expr: ($) =>
-      seq(
-        "|",
-        field("pattern", $._pattern_or),
-        "->",
-        field("value", $._expr)
       ),
 
     paren_expr: ($) => seq("(", $._expr, ")"),
@@ -818,13 +888,33 @@ export default grammar({
         field("value", $._expr)
       ),
 
-    // Constructor(label: value, ...)  — optional labels, UIDENT name
+    // [sigil] Constructor [(label: value, ...)]  — optional labels, UIDENT name.
+    // Parens are optional. The `%` sigil makes a linear constructor (eg
+    // `%MkPair(fst: 3, snd: 4)`); other sigils carry the same modality story
+    // documented on constructor_pattern.
     constructor_expr: ($) =>
-      seq(
-        field("name", $.uident),
-        "(",
-        field("args", commaSep($.ctor_arg)),
-        ")"
+      prec.right(
+        seq(
+          optional(field("sigil", $.sigil)),
+          field("name", $._ctor_path),
+          optional(seq(
+            "(",
+            field("args", commaSep($.ctor_arg)),
+            ")"
+          ))
+        )
+      ),
+
+    // Mixed-case dotted path that ends in a UIDENT, e.g. `Some`, `Mod.Ctor`,
+    // `Mod.Sub.Ctor`, `a.b.Ctor`. See parse_pattern.nx:262 (try_qualified_ctor_pat).
+    _ctor_path: ($) =>
+      choice(
+        $.uident,
+        seq(
+          sep1(".", choice($.identifier, $.uident)),
+          ".",
+          $.uident
+        )
       ),
 
     // [ label ":" ] expr — both labeled and unlabeled (positional or pun) forms.
@@ -834,11 +924,19 @@ export default grammar({
         field("value", $._expr)
       ),
 
-    // { field: value, ... }
+    // { field: value, ... }   or   { field, ~field, %field }  (punning)
+    // Punning: `{ x }` desugars to `{ x: x }`, `{ ~y }` to `{ y: ~y }`, etc.
+    // See parse_args.nx:35 for the sigil-aware punning paths.
     record_expr: ($) => seq("{", commaSep($.record_expr_field), "}"),
 
     record_expr_field: ($) =>
-      seq(field("name", $.identifier), ":", field("value", $._expr)),
+      choice(
+        seq(field("name", $.identifier), ":", field("value", $._expr)),
+        seq(
+          optional(field("sigil", $.sigil)),
+          field("name", $.identifier)
+        )
+      ),
 
     // [e1, e2, ...]  — trailing comma allowed per spec
     list_expr: ($) =>
@@ -888,8 +986,10 @@ export default grammar({
     char_literal: (_) =>
       token(seq("'", choice(/\\[0abtnvfre\\'"]/, /\\[0-7]{1,3}/, /\\x[0-9a-fA-F]{2}/, /\\u\{[0-9a-fA-F]+\}/, /[^'\\]/), "'")),
 
-    // Must come before integer_literal to consume the decimal part
-    float_literal: (_) => token(prec(2, /-?[0-9]+\.[0-9]+/)),
+    // Must come before integer_literal to consume the decimal part.
+    // Accepts: 3.14, 3.14e10, 3.14e-10, 1e10 (bare-int exponent → float).
+    float_literal: (_) =>
+      token(prec(2, /-?[0-9]+(\.[0-9]+([eE][+-]?[0-9]+)?|[eE][+-]?[0-9]+)/)),
 
     integer_literal: (_) => token(prec(1, /-?[0-9]+/)),
 
@@ -903,9 +1003,17 @@ export default grammar({
       token(
         choice(
           // double-quoted string with escape sequences
+          // Escapes mirror lexer.nx:389-537: \a \b \e \f \n \r \t \v \\ \" \'
+          // plus \xNN (hex), \u{HHHH+} (unicode), \NNN (1-3 digit octal).
           seq(
             '"',
-            repeat(choice(/\\[nrt\\""]/, /[^"\\\n]/)),
+            repeat(choice(
+              /\\[abefnrtv\\'"]/,
+              /\\x[0-9a-fA-F]{2}/,
+              /\\u\{[0-9a-fA-F]+\}/,
+              /\\[0-7]{1,3}/,
+              /[^"\\\n]/
+            )),
             '"'
           ),
           // bracket string [=[ ... ]=]
@@ -980,20 +1088,27 @@ export default grammar({
         field("name", $.identifier)
       ),
 
-    // [sigil] Constructor([ label ":" ] pat, ...)  — optional labels, UIDENT name.
+    // [sigil] [Module.]+Constructor [( [ label ":" ] pat, ... )] — optional
+    // labels and optional parens; UIDENT name; module path may mix lowercase
+    // and uppercase segments and end in any number of qualifiers, see
+    // parse_pattern.nx:262 (try_qualified_ctor_pat).
+    //
     // Sigil routes the constructor pattern onto the matching cell shape:
     //   ~Ctor(...) — ref-cell ctor pattern (mutable)
     //   %Ctor(...) — linear ctor pattern
     //   @Ctor(...) — lazy/thunk ctor pattern
     //   &Ctor(...) — borrow ctor pattern
-    // See parse_pattern.nx (nexus-nahg) for the sigil-aware fork.
     constructor_pattern: ($) =>
-      seq(
-        optional(field("sigil", $.sigil)),
-        field("name", $.uident),
-        "(",
-        commaSep($.ctor_pat_arg),
-        ")"
+      prec.right(
+        seq(
+          optional(field("sigil", $.sigil)),
+          field("name", $._ctor_path),
+          optional(seq(
+            "(",
+            commaSep($.ctor_pat_arg),
+            ")"
+          ))
+        )
       ),
 
     // [ label ":" ] pattern
@@ -1003,7 +1118,9 @@ export default grammar({
         field("pattern", $._pattern)
       ),
 
-    // { field: pat, ..., _ }
+    // { field: pat, ..., _ }   or   { x, y, ~z }  (punning)
+    // Punning: `{ x }` desugars to `{ x: x }` (variable-pattern binder), with
+    // optional sigil per parse_pattern.nx:540 (try_pun_pat_field_with_closer).
     record_pattern: ($) =>
       seq(
         "{",
@@ -1014,6 +1131,10 @@ export default grammar({
               field("field_name", $.identifier),
               ":",
               field("field_pattern", $._pattern)
+            ),
+            seq(
+              optional(field("sigil", $.sigil)),
+              field("field_name", $.identifier)
             )
           )
         ),
