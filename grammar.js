@@ -56,6 +56,16 @@ export default grammar({
     // semantically preferred to keep nesting flat. Same for if_let_stmt.
     [$._atom_expr, $.if_stmt],
     [$._atom_expr, $.if_let_stmt],
+    // bitwise `|` (binary_expr) shares its token with match/catch arm separators
+    // and can trail any expr-position form. binary_expr sits at prec.left(0) so
+    // these stay genuine GLR forks; the branch where no `-> ` follows dies,
+    // mirroring parser/core.nx:157 pipe_starts_arm lookahead. Mixing `|` with
+    // other binops (rare) associates loosely — ponytail: real code only uses flat
+    // `a | b` (bytebuffer/protobuf/sysio flags).
+    [$.binary_expr, $.throw_expr],
+    [$.binary_expr, $.return_stmt],
+    [$.binary_expr, $.assign_stmt],
+    [$.binary_expr, $.let_pattern_stmt],
   ],
 
   rules: {
@@ -523,12 +533,12 @@ export default grammar({
       )),
 
     match_case: ($) =>
-      seq(
+      prec.dynamic(2, seq(
         "|",
         field("pattern", $._pattern_or),
         "->",
         field("body", repeat($._stmt))
-      ),
+      )),
 
     // while cond do stmts end
     while_stmt: ($) =>
@@ -575,12 +585,12 @@ export default grammar({
       ),
 
     catch_arm: ($) =>
-      seq(
+      prec.dynamic(2, seq(
         "|",
         field("pattern", $._pattern_or),
         "->",
         field("body", repeat($._stmt))
-      ),
+      )),
 
     // inject handler1, mod.handler2 do stmts end
     inject_stmt: ($) =>
@@ -728,6 +738,15 @@ export default grammar({
             field("right", $._expr)
           )
         ),
+        // Bitwise OR (same precedence as additive; parser util.nx:406).
+        // dynamic(1) < match_case/catch_arm dynamic(2): at an arm-body boundary
+        // GLR keeps both and the arm separator wins; a real `a | b` with no
+        // following `-> ` only has the binary parse, so it still works.
+        prec.left(0, seq(
+              field("left", $._expr),
+              field("operator", "|"),
+              field("right", $._expr)
+            )),
         // Bitwise AND (same precedence as multiplicative)
         prec.left(
           5,

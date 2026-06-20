@@ -2553,36 +2553,40 @@
       }
     },
     "match_case": {
-      "type": "SEQ",
-      "members": [
-        {
-          "type": "STRING",
-          "value": "|"
-        },
-        {
-          "type": "FIELD",
-          "name": "pattern",
-          "content": {
-            "type": "SYMBOL",
-            "name": "_pattern_or"
-          }
-        },
-        {
-          "type": "STRING",
-          "value": "->"
-        },
-        {
-          "type": "FIELD",
-          "name": "body",
-          "content": {
-            "type": "REPEAT",
+      "type": "PREC_DYNAMIC",
+      "value": 2,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "|"
+          },
+          {
+            "type": "FIELD",
+            "name": "pattern",
             "content": {
               "type": "SYMBOL",
-              "name": "_stmt"
+              "name": "_pattern_or"
+            }
+          },
+          {
+            "type": "STRING",
+            "value": "->"
+          },
+          {
+            "type": "FIELD",
+            "name": "body",
+            "content": {
+              "type": "REPEAT",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_stmt"
+              }
             }
           }
-        }
-      ]
+        ]
+      }
     },
     "while_stmt": {
       "type": "SEQ",
@@ -2753,36 +2757,40 @@
       ]
     },
     "catch_arm": {
-      "type": "SEQ",
-      "members": [
-        {
-          "type": "STRING",
-          "value": "|"
-        },
-        {
-          "type": "FIELD",
-          "name": "pattern",
-          "content": {
-            "type": "SYMBOL",
-            "name": "_pattern_or"
-          }
-        },
-        {
-          "type": "STRING",
-          "value": "->"
-        },
-        {
-          "type": "FIELD",
-          "name": "body",
-          "content": {
-            "type": "REPEAT",
+      "type": "PREC_DYNAMIC",
+      "value": 2,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "|"
+          },
+          {
+            "type": "FIELD",
+            "name": "pattern",
             "content": {
               "type": "SYMBOL",
-              "name": "_stmt"
+              "name": "_pattern_or"
+            }
+          },
+          {
+            "type": "STRING",
+            "value": "->"
+          },
+          {
+            "type": "FIELD",
+            "name": "body",
+            "content": {
+              "type": "REPEAT",
+              "content": {
+                "type": "SYMBOL",
+                "name": "_stmt"
+              }
             }
           }
-        }
-      ]
+        ]
+      }
     },
     "inject_stmt": {
       "type": "SEQ",
@@ -3390,6 +3398,39 @@
                 "content": {
                   "type": "STRING",
                   "value": "^"
+                }
+              },
+              {
+                "type": "FIELD",
+                "name": "right",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_expr"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "PREC_LEFT",
+          "value": 0,
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "FIELD",
+                "name": "left",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "_expr"
+                }
+              },
+              {
+                "type": "FIELD",
+                "name": "operator",
+                "content": {
+                  "type": "STRING",
+                  "value": "|"
                 }
               },
               {
@@ -5520,6 +5561,22 @@
     [
       "_atom_expr",
       "if_let_stmt"
+    ],
+    [
+      "binary_expr",
+      "throw_expr"
+    ],
+    [
+      "binary_expr",
+      "return_stmt"
+    ],
+    [
+      "binary_expr",
+      "assign_stmt"
+    ],
+    [
+      "binary_expr",
+      "let_pattern_stmt"
     ]
   ],
   "precedences": [],
